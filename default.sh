@@ -37,8 +37,8 @@ PIP_PACKAGES=(
 
 # --- Model Downloads ---
 CHECKPOINT_MODELS=(
-    "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
-    "https://huggingface.co/kingcashflow/modelcheckpoints/resolve/main/AIIM_Realism.safetensors"
+    #"https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
+    #"https://huggingface.co/kingcashflow/modelcheckpoints/resolve/main/AIIM_Realism.safetensors"
 )
 
 # --- Helper Functions ---
@@ -61,15 +61,7 @@ setup_kohya_ss() {
     ./setup.sh
 }
 
-clone_kohya_ss() {
-    if [ ! -d "$KOHYA_SS_DIR" ]; then
-        echo "--> Cloning Kohya_SS repository..."
-        git clone "$KOHYA_SS_GIT_URL" "$KOHYA_SS_DIR"
-    else
-        echo "--> Kohya_SS repository already exists. Skipping clone."
-    fi
-    cd "$KOHYA_SS_DIR"
-}
+
 
 download_models() {
     echo "--> Downloading models..."
@@ -253,6 +245,8 @@ EOF
 start_kohya_ss() {
     echo "--> Activating venv and launching Kohya_SS GUI..."
     source venv/bin/activate
+    echo "--> Forcing torchaudio upgrade to fix dependency conflict..."
+    pip install torchaudio==2.5.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
     ./gui.sh --listen 0.0.0.0 --server_port 7860 --headless --config "$KOHYA_SS_DIR/config.json"
 }
 
@@ -260,8 +254,21 @@ start_kohya_ss() {
 
 provisioning_print_header
 
+# Install system-level packages first
 install_apt_packages
-clone_kohya_ss
+
+# Clone the repository if it doesn't exist
+if [ ! -d "$KOHYA_SS_DIR" ]; then
+    echo "--> Cloning Kohya_SS repository..."
+    git clone "$KOHYA_SS_GIT_URL" "$KOHYA_SS_DIR"
+else
+    echo "--> Kohya_SS repository already exists. Skipping clone."
+fi
+
+# Enter the directory and perform all subsequent actions
+echo "--> Entering $KOHYA_SS_DIR directory..."
+cd "$KOHYA_SS_DIR"
+
 setup_kohya_ss
 download_models
 create_config_file
