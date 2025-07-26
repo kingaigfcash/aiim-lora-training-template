@@ -54,10 +54,10 @@ install_apt_packages() {
     apt-get install -y "${APT_PACKAGES[@]}"
 }
 
-install_pip_packages() {
-    echo "--> Installing Python packages..."
-    pip install --upgrade pip
-    pip install "${PIP_PACKAGES[@]}"
+setup_kohya_ss() {
+    echo "--> Running Kohya_SS setup script..."
+    # The setup script will create a venv and install dependencies
+    ./setup.sh
 }
 
 clone_kohya_ss() {
@@ -250,7 +250,8 @@ EOF
 }
 
 start_kohya_ss() {
-    echo "--> Launching Kohya_SS GUI..."
+    echo "--> Activating venv and launching Kohya_SS GUI..."
+    source venv/bin/activate
     ./gui.sh --listen 0.0.0.0 --server_port 7860 --headless --config "$KOHYA_SS_DIR/config.json"
 }
 
@@ -260,7 +261,7 @@ provisioning_print_header
 
 install_apt_packages
 clone_kohya_ss
-install_pip_packages
+setup_kohya_ss
 download_models
 create_config_file
 start_kohya_ss
