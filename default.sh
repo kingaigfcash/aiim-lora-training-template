@@ -247,7 +247,7 @@ start_kohya_ss() {
     source venv/bin/activate
     echo "--> Forcing torchaudio upgrade to fix dependency conflict..."
     pip install torchaudio==2.5.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
-    ./gui.sh --listen 0.0.0.0 --server_port 7860 --headless --config "$KOHYA_SS_DIR/config.json"
+    ./gui.sh --listen 0.0.0.0 --server_port ${PORT:-7860} --headless --config "$KOHYA_SS_DIR/config.json"
 }
 
 # --- Main Execution ---
