@@ -43,6 +43,13 @@ CHECKPOINT_MODELS=(
 
 # --- Main Execution ---
 
+# Install python3-tk to prevent an error in the upstream setup script
+if ! dpkg -s python3-tk >/dev/null 2>&1; then
+    echo "--> Installing python3-tk..."
+    apt-get update && apt-get install -y python3-tk
+fi
+
+
 # Clone the repository if it doesn't exist
 if [ ! -d "$KOHYA_SS_DIR/.git" ]; then
     echo "--> Cloning Kohya_SS repository..."
