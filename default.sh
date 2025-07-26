@@ -15,7 +15,7 @@ APT_PACKAGES=(
     "python3-pip"
     "python3-venv"
     "libgl1-mesa-glx"
-    "libglib2.0-0",
+    "libglib2.0-0"
     "python3-tk"
 )
 
