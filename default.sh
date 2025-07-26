@@ -50,8 +50,8 @@ provisioning_print_header() {
 
 install_apt_packages() {
     echo "--> Installing system packages..."
-    sudo apt-get update
-    sudo apt-get install -y "${APT_PACKAGES[@]}"
+    apt-get update
+    apt-get install -y "${APT_PACKAGES[@]}"
 }
 
 install_pip_packages() {
