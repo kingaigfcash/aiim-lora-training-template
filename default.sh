@@ -47,6 +47,9 @@ CHECKPOINT_MODELS=(
 export WEB_USER="user"
 export WEB_PASSWORD="password"
 
+# Set arguments for Kohya's GUI
+export KOHYA_ARGS="--listen 0.0.0.0 --server_port 17860"
+
 # Set environment variable for the config file
 export KOHYA_CONFIG_FILE="/workspace/aiim-lora-training-template/kohya_config.json"
 
