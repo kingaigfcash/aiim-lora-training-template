@@ -43,6 +43,9 @@ CHECKPOINT_MODELS=(
 
 # --- Main Execution ---
 
+# Set environment variable for the config file
+export KOHYA_CONFIG_FILE="/workspace/aiim-lora-training-template/kohya_config.json"
+
 # Install python3-tk to prevent an error in the upstream setup script
 if ! dpkg -s python3-tk >/dev/null 2>&1; then
     echo "--> Installing python3-tk..."
