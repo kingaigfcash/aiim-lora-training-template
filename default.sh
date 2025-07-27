@@ -2,8 +2,6 @@
 # This file will be sourced in init.sh
 # Namespace functions with provisioning_
 
-# https://raw.githubusercontent.com/ai-dock/kohya_ss/main/config/provisioning/default.sh
-
 ### Edit the following arrays to suit your workflow - values must be quoted and separated by newlines or spaces.
 
 DISK_GB_REQUIRED=30
@@ -23,6 +21,10 @@ CHECKPOINT_MODELS=(
 function provisioning_start() {
     source /opt/ai-dock/etc/environment.sh
     source /opt/ai-dock/bin/venv-set.sh kohya
+
+    # Download the configuration file from GitHub
+    printf "Downloading Lora training configuration...\n"
+    wget -O /workspace/kohya_config.json https://raw.githubusercontent.com/kingaigfcash/aiim-lora-training-template/main/kohya_config.json
     
     DISK_GB_AVAILABLE=$(($(df --output=avail -m "${WORKSPACE}" | tail -n1) / 1000))
     DISK_GB_USED=$(($(df --output=used -m "${WORKSPACE}" | tail -n1) / 1000))
@@ -31,7 +33,7 @@ function provisioning_start() {
     provisioning_get_mamba_packages
     provisioning_get_pip_packages
     provisioning_get_models \
-        "${WORKSPACE}/storage/stable_diffusion/models/ckpt" \
+        "/workspace/kohya_ss/models" \
         "${CHECKPOINT_MODELS[@]}"
      
     provisioning_print_end
