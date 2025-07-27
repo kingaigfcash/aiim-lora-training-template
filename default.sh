@@ -43,6 +43,10 @@ CHECKPOINT_MODELS=(
 
 # --- Main Execution ---
 
+# Set auth for the web UI
+export WEB_USER="user"
+export WEB_PASSWORD="password"
+
 # Set environment variable for the config file
 export KOHYA_CONFIG_FILE="/workspace/aiim-lora-training-template/kohya_config.json"
 
