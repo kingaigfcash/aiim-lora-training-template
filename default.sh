@@ -1,78 +1,92 @@
 #!/bin/bash
+# This file will be sourced in init.sh
+# Namespace functions with provisioning_
 
-# This script provisions a Runpod environment for Kohya_SS.
+# https://raw.githubusercontent.com/ai-dock/kohya_ss/main/config/provisioning/default.sh
 
-# Exit on error
-set -e
+### Edit the following arrays to suit your workflow - values must be quoted and separated by newlines or spaces.
 
-# Variables
-KOHYA_SS_DIR="/workspace/kohya_ss"
-KOHYA_SS_GIT_URL="https://github.com/bmaltais/kohya_ss.git"
-
-# --- System Packages ---
-APT_PACKAGES=(
-    "git"
-    "python3-pip"
-    "python3-venv"
-    "libgl1-mesa-glx"
-    "libglib2.0-0"
-    "python3-tk"
-)
-
-# --- Python Packages ---
+DISK_GB_REQUIRED=30
+  
 PIP_PACKAGES=(
-    "torch==2.1.2"
-    "torchvision==0.16.2"
-    "torchaudio==2.1.2"
-    "xformers==0.0.23.post1"
-    "accelerate==0.25.0"
-    "transformers==4.36.2"
-    "diffusers==0.25.1"
-    "safetensors==0.4.1"
-    "peft==0.7.1"
-    "prodigyopt==1.0"
-    "bitsandbytes==0.42.0"
-    "gradio==3.48.0"
-)
+    #"package==version"
+  )
 
-# --- Model Downloads ---
 CHECKPOINT_MODELS=(
-    #"https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
-    #"https://huggingface.co/kingcashflow/modelcheckpoints/resolve/main/AIIM_Realism.safetensors"
+    "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned.ckpt"
+    "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
 )
 
-# --- Main Execution ---
 
-# Set auth for the web UI
-export WEB_USER="user"
-export WEB_PASSWORD="password"
+### DO NOT EDIT BELOW HERE UNLESS YOU KNOW WHAT YOU ARE DOING ###
 
-# Set arguments for Kohya's GUI
-export KOHYA_ARGS="--listen 127.0.0.1 --server_port 17860"
+function provisioning_start() {
+    source /opt/ai-dock/etc/environment.sh
+    source /opt/ai-dock/bin/venv-set.sh kohya
+    
+    DISK_GB_AVAILABLE=$(($(df --output=avail -m "${WORKSPACE}" | tail -n1) / 1000))
+    DISK_GB_USED=$(($(df --output=used -m "${WORKSPACE}" | tail -n1) / 1000))
+    DISK_GB_ALLOCATED=$(($DISK_GB_AVAILABLE + $DISK_GB_USED))
+    provisioning_print_header
+    provisioning_get_mamba_packages
+    provisioning_get_pip_packages
+    provisioning_get_models \
+        "${WORKSPACE}/storage/stable_diffusion/models/ckpt" \
+        "${CHECKPOINT_MODELS[@]}"
+     
+    provisioning_print_end
+}
 
-# Set environment variable for the config file
-export KOHYA_CONFIG_FILE="/workspace/aiim-lora-training-template/kohya_config.json"
+function provisioning_get_pip_packages() {
+    if [[ -n $PIP_PACKAGES ]]; then
+        "$KOHYA_VENV_PIP" install --no-cache-dir ${PIP_PACKAGES[@]}
+    fi
+}
 
-# Install python3-tk to prevent an error in the upstream setup script
-if ! dpkg -s python3-tk >/dev/null 2>&1; then
-    echo "--> Installing python3-tk..."
-    apt-get update && apt-get install -y python3-tk
-fi
+function provisioning_get_models() {
+    if [[ -z $2 ]]; then return 1; fi
+    dir="$1"
+    mkdir -p "$dir"
+    shift
+    if [[ $DISK_GB_ALLOCATED -ge $DISK_GB_REQUIRED ]]; then
+        arr=("$@")
+    else
+        printf "WARNING: Low disk space allocation - Only the first model will be downloaded!\n"
+        arr=("$1")
+    fi
+    
+    printf "Downloading %s model(s) to %s...\n" "${#arr[@]}" "$dir"
+    for url in "${arr[@]}"; do
+        printf "Downloading: %s\n" "${url}"
+        provisioning_download "${url}" "${dir}"
+        printf "\n"
+    done
+}
 
+function provisioning_print_header() {
+    printf "\n##############################################\n#                                            #\n#          Provisioning container            #\n#                                            #\n#         This will take some time           #\n#                                            #\n# Your container will be ready on completion #\n#                                            #\n##############################################\n\n"
+    if [[ $DISK_GB_ALLOCATED -lt $DISK_GB_REQUIRED ]]; then
+        printf "WARNING: Your allocated disk size (%sGB) is below the recommended %sGB - Some models will not be downloaded\n" "$DISK_GB_ALLOCATED" "$DISK_GB_REQUIRED"
+    fi
+}
 
-# Clone the repository if it doesn't exist
-if [ ! -d "$KOHYA_SS_DIR/.git" ]; then
-    echo "--> Cloning Kohya_SS repository..."
-    # Clone the repository and navigate into the directory
-    git clone "$KOHYA_SS_GIT_URL" "$KOHYA_SS_DIR" && cd "$KOHYA_SS_DIR"
-else
-    echo "--> Kohya_SS repository already exists. Entering directory..."
-    cd "$KOHYA_SS_DIR"
-fi
+function provisioning_print_end() {
+    printf "\nProvisioning complete:  Web UI will start now\n\n"
+}
 
-# Run the setup script with the runpod flag
-# This will handle venv creation, dependency installation, and launching the GUI
-echo "--> Running Kohya_SS setup for RunPod..."
-./setup.sh --runpod
+# Download from $1 URL to $2 file path
+function provisioning_download() {
+    if [[ -n $HF_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?huggingface\.co(/|$|\?) ]]; then
+        auth_token="$HF_TOKEN"
+    elif 
+        [[ -n $CIVITAI_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?civitai\.com(/|$|\?) ]]; then
+        auth_token="$CIVITAI_TOKEN"
+    fi
+    if [[ -n $auth_token ]];then
+        wget --header="Authorization: Bearer $auth_token" -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
+    else
+        wget -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
+    fi
+}
 
-echo "--> Provisioning complete. Kohya_SS is running or has completed setup."
+provisioning_start
